@@ -38,7 +38,7 @@ Regular Expressions: For parsing HTML and extracting review data from Amazon's s
 1. Clone the repository:
 
    ```bash
-    git clone https://github.com/yourusername/Amazon-Sentiment-Analysis.git
+    git clone https://github.com/raecellann/Amazon_Review-Sentiment-Analysis.git
 
 2. Install the required dependencies
 
