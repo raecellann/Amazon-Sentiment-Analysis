@@ -18,8 +18,15 @@ class AmazonReviewAnalyzer:
         }
 
     def load_page(self):
-        response = requests.get(self.website_link, headers=self.headers_for_request)
-        return response.text
+        try:
+            response = requests.get(self.website_link, headers=self.headers_for_request)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+        except Exception as err:
+            print(f"An error occurred: {err}")
+        return None
 
     def extract_product_name(self, page_source):
         product_name_pattern = r'<span id="productTitle"[^>]*>(.*?)</span>'
@@ -34,7 +41,8 @@ class AmazonReviewAnalyzer:
 
     def extract_reviews_from_area(self, review_section):
         review_pattern = r'<div\sclass="a-row a-spacing-small review-data">([\s\S]*?)<\/div>'
-        return re.findall(review_pattern, review_section.group(1))
+        reviews = re.findall(review_pattern, review_section.group(1))
+        return reviews
 
     def extract_review_message(self, single_review_block):
         review_message_pattern = r'<span>([\s\S]*?)<\/span>'
@@ -52,15 +60,15 @@ class AmazonReviewAnalyzer:
                     all_reviews.append(review_message)
         return all_reviews
 
-    def calculate_star_rating(self, user_review):
-        compound_score = user_review['compound']
-        if compound_score >= 0.75:
+    def calculate_star_rating(self, sentiment_scores):
+        compound_score = sentiment_scores['compound']
+        if compound_score > 0.75:
             return 5
-        elif compound_score >= 0.25:
+        elif 0.5 < compound_score <= 0.75:
             return 4
-        elif compound_score >= 0:
+        elif -0.1 <= compound_score <= 0.5:
             return 3
-        elif compound_score >= -0.25:
+        elif -0.5 <= compound_score < -0.1:
             return 2
         else:
             return 1
@@ -69,24 +77,33 @@ class AmazonReviewAnalyzer:
         sia = SentimentIntensityAnalyzer()
         for review in reviews:
             print('━━━━━━━━━━━━━━━━━━━━━━')
-            print(review)
+            print(f"Review: {review}")
+
             user_rating = sia.polarity_scores(review)
-            rating = self.calculate_star_rating(user_rating)
-            print(f"Rating: {round(rating)}")
+            sentiment = "Positive" if user_rating['compound'] >= 0.05 else "Negative" if user_rating['compound'] <= -0.05 else "Neutral"
+
+            print(f"Sentiment Scores: {user_rating}")
+            print(f"Review Sentiment: {sentiment}")
+
+            predicted_rating = self.calculate_star_rating(user_rating)
+            print(f"Star Rating: {predicted_rating} stars")
             print('――――――――――――――――――――――――――――――――――――――――――――――')
 
-if __name__ == '__main__':
-    link = input("Enter the Amazon Product link: \n")
+REQUEST_URL = 'https://www.amazon.com/QEEIG-Floating-Shelves-Bathroom-Farmhouse/dp/B09T66W5D1/ref=sr_1_4?dib=eyJ2IjoiMSJ9.5XAwrJdUG3hQaLhulEB1euKQBtNV06NlnOG4zrrXXiW-oXAGiOIZ3aAvCH8zLdZEqcjMioAstQ5BEcI0cD31i0C8QJ9TIOwp0tilVk0Jb5PithiqvDG6LN4klPP76eEIKxJ__biNDAWwk0Dae1vEpeeA6tm-6sWTjYIKbaiW2TqnkYu1b_nHpNR5AcN1JG5F8YnIAqEx1gZ6TJiA131NL7tVA4NE2BKkS6g_r_5H8s1lP9e-boi312l46FFAE6idrurRVYYJ_3hGu71K6YgXgFDomGSjHNAcHQI5en64_uY.zP9HFccPBV2w0h6VWNRQYEHw3rMGNNPDFgGVq4f0rOA&dib_tag=se&keywords=Shelves&pf_rd_p=3bfbee16-7af3-47c3-b4e4-8cb236780a84&pf_rd_r=4X1FW8F4YESMAQ161YVK&qid=1729258473&s=furniture&sr=1-4'
 
-    analyzer = AmazonReviewAnalyzer(link)
+if __name__ == '__main__':
+    user_input = input("Enter the Amazon Product link: \n")
+    REQUEST_URL = user_input.strip() or REQUEST_URL
+
+    analyzer = AmazonReviewAnalyzer(REQUEST_URL)
     page_content = analyzer.load_page()
 
-    product_name = analyzer.extract_product_name(page_content)
+    if page_content:
+        product_name = analyzer.extract_product_name(page_content)
+        print(f"\nProduct Name: {product_name}")
 
-    print(f"\nProduct Name: {product_name}")
-
-    reviews = analyzer.gather_reviews(page_content)
-    if reviews:
-        analyzer.analyze_reviews(reviews)
-    else:
-        print("No reviews found.")
+        reviews = analyzer.gather_reviews(page_content)
+        if reviews:
+            analyzer.analyze_reviews(reviews)
+        else:
+            print("No reviews found.")
