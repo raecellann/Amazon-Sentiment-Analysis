@@ -25,8 +25,6 @@ Sentiment Analysis: Each review is processed through VADER's sentiment intensity
 Review Output: For each review, the sentiment analysis results are printed alongside the review text and an estimated star rating.
 
 # Technologies Used: 👩🏻‍💻
-Python: The core programming language for implementing the web scraper and sentiment analysis logic.
-
 Requests: For sending HTTP requests and retrieving Amazon page content.
 
 nltk (VADER): Natural Language Toolkit's VADER model is used for sentiment analysis to classify reviews as positive, negative, or neutral.
